@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware, types
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.exc import NoResultFound
 
-from integrations.database.models.policy_status import get_learning_status
+from integrations.database.models.policy_status import get_learning_status, is_learning_status_exists
 from integrations.database.models.user import get_user
 
 
@@ -25,13 +25,17 @@ class AccessCheck(BaseMiddleware):
             try:
                 policy_info = await get_learning_status(event.from_user.id, session_maker)
                 if user_info.is_admin is False:
-                    if datetime.now() - policy_info.date_start >= timedelta(days=3):
-                        if isinstance(event, types.Message):
-                            await event.answer('<b>У вас закончилось время для доступа к курсу</b>')
+                    if await is_learning_status_exists(event.from_user.id, session_maker):
+                        if datetime.now() - policy_info.date_start >= timedelta(days=3):
+                            if isinstance(event, types.Message):
+                                await event.answer('<b>У вас закончилось время для доступа к курсу</b>')
+                            else:
+                                await event.answer('У вас закончилось время для доступа к курсу')
                         else:
-                            await event.answer('У вас закончилось время для доступа к курсу')
+                            return await handler(event, data)
                     else:
                         return await handler(event, data)
+
                 else:
                     return await handler(event, data)
             except NoResultFound:

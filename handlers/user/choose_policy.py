@@ -52,6 +52,7 @@ async def get_policy(call: types.CallbackQuery, state: FSMContext, session_maker
                                 f'ФИО: <code>{user_info.user_fio}</code>\n'
                                 f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
                                 f'Имя: <code>{user_info.telegram_fullname}</code>\n'
+                                f'Юзернейм в ТГ: <code>{user_info.telegram_username}</code>\n'
                                 f'ID в БД: <code>{user_info.id}</code>\n'
                                 f'⭐️ Направление: <code>{text}</code>\n'
                                 f'Верификация номера телефона: <code>True ✅</code></b>',

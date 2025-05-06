@@ -54,3 +54,9 @@ async def delete_question(path: str, session_maker: sessionmaker):
             result = await session.execute(select(Questions).where(Questions.path == path))
             await session.delete(result.scalars().first())
             await session.commit()
+
+async def get_question_by_id(question_id: int, session_maker: sessionmaker) -> Questions:
+    async with session_maker() as session:
+        async with session.begin():
+            result = await session.execute(select(Questions).where(Questions.id == question_id))
+            return result.scalars().one()

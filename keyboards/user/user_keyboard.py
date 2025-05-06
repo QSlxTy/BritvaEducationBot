@@ -42,10 +42,14 @@ async def choose_policy_kb(user_id, session_maker):
         builder.button(text='✂️ Я Мастер', callback_data='barber_choose')
         builder.button(text='🤵 Я администратор', callback_data='admin_choose')
     else:
-        user_info = await get_new_user(user.phone, session_maker)
-        if user_info.policy == 'barber':
+        try:
+            user_info = await get_new_user(user.phone, session_maker)
+            if user_info.policy == 'barber':
+                builder.button(text='✂️ Я Мастер', callback_data='barber_choose')
+            else:
+                builder.button(text='🤵 Я администратор', callback_data='admin_choose')
+        except Exception:
             builder.button(text='✂️ Я Мастер', callback_data='barber_choose')
-        else:
             builder.button(text='🤵 Я администратор', callback_data='admin_choose')
     builder.button(text='🔙 В главное меню', callback_data='main_menu')
     builder.adjust(1, 1)
@@ -77,8 +81,8 @@ async def menu_kb(session_maker, user_id):
 
     if user_profile_info.is_admin == 1:
         builder.button(text='➖➖➖➖➖➖➖➖', callback_data=' ')
-        builder.button(text='➕ Добавить урок к курсу', callback_data='add_lesson')
-        builder.button(text='📋 Просмотреть список уроков', callback_data='get_list')
+        #builder.button(text='➕ Добавить урок к курсу', callback_data='add_lesson')
+        #builder.button(text='📋 Просмотреть список уроков', callback_data='get_list')
         builder.button(text='⚙️ Добавить администратора', callback_data='add_admin')
         builder.button(text='👨‍🎓 Добавить ученика', callback_data='add_user')
 
@@ -94,9 +98,9 @@ async def menu_learn_kb():
     return builder.as_markup()
 
 
-async def select_page_kb():
+async def select_page_kb(text_kb):
     builder = InlineKeyboardBuilder()
-    builder.button(text='📋 Пройти тест', callback_data='send_test')
+    builder.button(text=text_kb, callback_data='send_test')
     builder.button(text='🔙 В меню', callback_data='main_menu')
     builder.adjust(1)
     return builder.as_markup()

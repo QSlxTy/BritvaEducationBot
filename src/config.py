@@ -36,6 +36,14 @@ class BotConfig:
 
 
 @dataclass
+class PaymentConfig:
+    merchant_login = getenv('MERCHANT_LOGIN')
+    merchant_password_1 = getenv('MERCHANT_PASSWORD_1')
+    merchant_password_2 = getenv('MERCHANT_PASSWORD_2')
+    merchant_cost = getenv('MERCHANT_COST')
+
+
+@dataclass
 class Configuration:
     debug = bool(getenv('DEBUG'))
     logging_level = int(getenv('LOGGING_LEVEL', logging.INFO))
@@ -45,6 +53,6 @@ class Configuration:
 
     admin_topic = getenv('ADMIN_TOPIC')
     admin_topic_url = getenv('ADMIN_TOPIC_URL')
-    phone_token = getenv('PHONE_TOKEN')
+
 
 conf = Configuration()

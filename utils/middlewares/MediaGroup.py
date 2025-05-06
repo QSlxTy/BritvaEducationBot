@@ -1,3 +1,10 @@
+"""
+AUTHOR CODE - DEAD_MATRIX
+TG: @DEAD_MATRIX
+KWORK: kwork.ru/user/dead_matrix
+Site Company: buy-bot.ru
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

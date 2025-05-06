@@ -12,7 +12,7 @@ from integrations.database.models.user import update_user, get_user
 from keyboards.admin.admin_keyboard import admin_topic_kb
 from keyboards.user.user_keyboard import to_menu_kb
 from src.config import conf
-from utils.SMS import send_sms
+from utils.sms_api import send_sms
 from utils.states.admin import FSMReg
 from utils.states.user import FSMPhone, FSMStart
 
@@ -81,45 +81,52 @@ async def verify_phone(message: types.Message, session_maker: sessionmaker, stat
         try:
             await state.set_state(FSMReg.verify_phone)
             msg = await data['msg'].edit_text(
-                '<b>✅ Регистрация прошла успешно\n\n'
-                'Остался последний этап...\n\n'
-                'Укажите свои данные в формате \n'
-                '<code>Фамилия Имя </code>\n\n'
-                'Данные будут использоватся для занесения в сертификат при его получении</b>\n\n'
-                '*️<i>Перед отправкой тщательно проверьте, данные изменить будет нельзя ❗️</i>'
+                text='<b>✅ Регистрация прошла успешно\n\n'
+                     'Остался последний этап...\n\n'
+                     'Укажите свои данные в формате \n'
+                     '<code>Фамилия Имя </code>\n\n'
+                     'Данные будут использоватся для занесения в сертификат при его получении</b>\n\n'
+                     '*️<i>Перед отправкой тщательно проверьте, данные изменить будет нельзя ❗️</i>'
             )
         except (TelegramBadRequest, KeyError) as _ex:
             logging.error(_ex)
             await message.delete()
             msg = await message.answer(
-                '<b>✅ Регистрация прошла успешно\n\n'
-                'Остался последний этап...\n\n'
-                'Укажите свои данные ФИО в формате \n'
-                'Фамилия Имя Отчество\n\n'
-                'Данные будут использоватся для занесения в сертификат при его получении</b>\n\n'
-                '*️<i>Перед отправкой тщательно проверьте, данные изменить будет нельзя ❗️</i>'
+                text='<b>✅ Регистрация прошла успешно\n\n'
+                     'Остался последний этап...\n\n'
+                     'Укажите свои данные ФИО в формате \n'
+                     'Фамилия Имя Отчество\n\n'
+                     'Данные будут использоватся для занесения в сертификат при его получении</b>\n\n'
+                     '*️<i>Перед отправкой тщательно проверьте, данные изменить будет нельзя ❗️</i>'
             )
         user_info = await get_user(message.from_user.id, session_maker)
-        await bot.send_message(chat_id=int(conf.admin_topic),
-                               message_thread_id=int(user_info.topic_id),
-                               text=f'<b>🔔 Пользователь подтвердил номер телефона\n\n'
-                                    f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
-                                    f'Имя: <code>{user_info.telegram_fullname}</code>\n'
-                                    f'ID в БД: <code>{user_info.id}</code>\n'
-                                    f'⭐️ Верификация номера телефона: <code>True ✅</code></b>',
-                               reply_markup=await admin_topic_kb())
+        await bot.send_message(
+            chat_id=int(conf.admin_topic),
+            message_thread_id=int(user_info.topic_id),
+            text=f'<b>🔔 Пользователь подтвердил номер телефона\n\n'
+                 f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
+                 f'Имя: <code>{user_info.telegram_fullname}</code>\n'
+                 f'Юзернейм в ТГ: <code>{user_info.telegram_username}</code>\n'
+                 f'ID в БД: <code>{user_info.id}</code>\n'
+                 f'⭐️ Верификация номера телефона: <code>True ✅</code></b>',
+            reply_markup=await admin_topic_kb()
+        )
         await update_user(message.from_user.id, {'verify': True}, session_maker)
     else:
         try:
-            msg = await data['msg'].edit_text('<b>❌ Вы указали неверный код\n'
-                                              'Вы можете ввести код ещё раз или начать операцию заново</b>\n\n'
-                                              '<i>*️Для этого нажмите /start ❗️</i>')
+            msg = await data['msg'].edit_text(
+                text='<b>❌ Вы указали неверный код\n'
+                     'Вы можете ввести код ещё раз или начать операцию заново</b>\n\n'
+                     '<i>*️Для этого нажмите /start ❗️</i>'
+            )
         except (TelegramBadRequest, KeyError) as _ex:
             logging.error(_ex)
             await message.delete()
-            msg = await message.answer('<b>❌ Вы указали неверный код\n'
-                                       'Вы можете ввести код ещё раз или начать операцию заново</b>\n\n'
-                                       '<i>*️Для этого нажмите /start ❗️</i>')
+            msg = await message.answer(
+                text='<b>❌ Вы указали неверный код\n'
+                     'Вы можете ввести код ещё раз или начать операцию заново</b>\n\n'
+                     '<i>*️Для этого нажмите /start ❗️</i>'
+            )
     await state.update_data(msg=msg)
 
 
@@ -130,26 +137,29 @@ async def get_fio(message: types.Message, state: FSMContext, session_maker: sess
     try:
         await state.set_state(FSMReg.verify_phone)
         msg = await data['msg'].edit_text(
-            '<b>Регистрация завершена ✔️</b>',
+            text='<b>Регистрация завершена ✔️</b>',
             reply_markup=await to_menu_kb()
         )
     except (TelegramBadRequest, KeyError) as _ex:
         logging.error(_ex)
         await message.delete()
         msg = await message.answer(
-            '<b>Регистрация завершена ✔️</b>',
+            text='<b>Регистрация завершена ✔️</b>',
             reply_markup=await to_menu_kb()
         )
     user_info = await get_user(message.from_user.id, session_maker)
-    await bot.send_message(chat_id=int(conf.admin_topic),
-                           message_thread_id=int(user_info.topic_id),
-                           text=f'<b>🔔 Пользователь указал ФИО\n\n'
-                                f'⭐ ФИО: <code>{user_info.user_fio}</code>\n'
-                                f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
-                                f'Имя: <code>{user_info.telegram_fullname}</code>\n'
-                                f'ID в БД: <code>{user_info.id}</code>\n'
-                                f'️Верификация номера телефона: <code>True ✅</code></b>',
-                           reply_markup=await admin_topic_kb())
+    await bot.send_message(
+        chat_id=int(conf.admin_topic),
+        message_thread_id=int(user_info.topic_id),
+        text=f'<b>🔔 Пользователь указал ФИО\n\n'
+             f'⭐ ФИО: <code>{user_info.user_fio}</code>\n'
+             f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
+             f'Имя: <code>{user_info.telegram_fullname}</code>\n'
+             f'Юзернейм в ТГ: <code>{user_info.telegram_username}</code>\n'
+             f'ID в БД: <code>{user_info.id}</code>\n'
+             f'️Верификация номера телефона: <code>True ✅</code></b>',
+        reply_markup=await admin_topic_kb()
+    )
     await state.clear()
     await state.update_data(msg=msg)
 

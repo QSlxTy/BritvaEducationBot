@@ -23,8 +23,16 @@ class RegisterCheck(BaseMiddleware):
             if not await is_user_exists(user_id=event.from_user.id, session_maker=session_maker):
                 topic_id = await event.bot.create_forum_topic(int(conf.admin_topic),
                                                               f'{event.from_user.full_name} [ID{event.from_user.id}]')
-                await create_user(event.from_user.id, event.from_user.username, int(topic_id.message_thread_id),
-                                  event.from_user.first_name,
+                if event.from_user.username is None:
+                    username = 'None'
+                else:
+                    username = event.from_user.username
+                if event.from_user.first_name is None:
+                    first_name = 'None'
+                else:
+                    first_name = event.from_user.first_name
+                await create_user(event.from_user.id, username, int(topic_id.message_thread_id),
+                                  first_name,
                                   session_maker)
                 user_row = await get_user(event.from_user.id, session_maker)
                 await event.bot.send_message(chat_id=int(conf.admin_topic),

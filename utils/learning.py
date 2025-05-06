@@ -39,17 +39,15 @@ async def learning_process(call: types.CallbackQuery, state: FSMContext, session
 async def handle_no_attempts(call, user_info, state, session_maker):
     try:
         msg = await call.message.answer(
-            text='<b>Для доступа к боту перейди на сайт https://britva-education.ru/ и выполни указанные шаги'
-                 'Ждем твоего возвращения </b>😉',
-            disable_web_page_preview=True
+            text='<b>К сожалению у вас закончились попытки для прохождения обучения\n\n'
+                 'Оплатите курс ещё раз и нажмите старт</b>/start'
         )
     except TelegramBadRequest as _ex:
         logging.error(_ex)
         await call.message.delete()
         msg = await call.message.answer(
-            text='<b>Для доступа к боту перейди на сайт https://britva-education.ru/ и выполни указанные шаги'
-                 'Ждем твоего возвращения </b>😉',
-            disable_web_page_preview=True
+            text='<b>К сожалению у вас закончились попытки для прохождения обучения\n\n'
+                 'Оплатите курс ещё раз и нажмите старт</b>/start'
         )
     await delete_user_data(user_info, session_maker)
     await state.update_data(msg=msg)
@@ -105,7 +103,7 @@ async def handle_course_completion(data, policy_info, session_maker, state):
     logger.info(f'End policy. score -- {policy_info.user_score} -- max score {max_score}')
 
     if policy_info.user_score < max_score * 0.9:
-        await send_failure_message(data, policy_info, user_info, max_score, progress_bar_testing, state, session_maker)
+        await send_failure_message(data, user_info, max_score, progress_bar_testing, state, session_maker)
         await update_learning_status(data['user_id'], {
             'status': 'Не начинал',
             'count_try': policy_info.count_try - 1,
@@ -134,7 +132,7 @@ async def delete_previous_messages(data):
             pass
 
 
-async def send_failure_message(data, policy_info, user_info, max_score, progress_bar_testing, state, session_maker):
+async def send_failure_message(data, user_info, max_score, progress_bar_testing, state, session_maker):
     policy_info = await get_learning_status(user_id=int(data['user_id']), session_maker=session_maker)
     msg = await bot.send_message(
         chat_id=data['user_id'],
@@ -171,6 +169,7 @@ async def send_success_message(data, user_info, policy_info, max_score, progress
              f"{progress_bar_testing}\n\n</b>"
              f"<i>❗️ Сертификат удалится если вы нажмёте</i> /start"
     )
+    await send_bad_answers(data, policy_info, session_maker, state)
     file_path = await generate_certify(user_info.user_fio, user_info.telegram_id, policy_info.policy)
     await bot.send_photo(
         photo=FSInputFile(file_path),

@@ -7,7 +7,8 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.orm import sessionmaker
 
 from bot_start import bot
-from integrations.database.models.user import is_user_exists_by_username, update_user, get_user_by_username
+from integrations.database.models.user import is_user_exists_by_username, update_user, get_user_by_username, \
+    is_user_exists, get_user
 from keyboards.admin.admin_keyboard import choose_add_admin_kb
 from keyboards.user.user_keyboard import back_menu_kb
 from src.config import Configuration
@@ -28,8 +29,10 @@ async def add_admin(call: types.CallbackQuery, state: FSMContext, session_maker:
         await call.message.delete()
         msg = await call.message.answer(
             text=f'<b>Чтобы добавить администратора, вам нужно указать его <code>@username</code>\n\n'
-                 f'Важно❗️ Перед этим, пользователь должен нажать /start для того, чтобы бот его узнал</b>',
-            reply_markup=await back_menu_kb())
+                 f'❗️ Или укажите его ТГ ID вместо <code>@username</code>\n\n'
+                 f'❗️️Перед этим, пользователь должен нажать /start для того, чтобы бот его узнал</b>',
+            reply_markup=await back_menu_kb()
+        )
     await state.update_data(msg=msg)
 
 
@@ -38,28 +41,70 @@ async def get_admin(message: types.Message, state: FSMContext, session_maker: se
     name = message.text.replace('@', '')
     await state.update_data(new_admin=message.text.replace('@', ''))
     await message.delete()
-    if await is_user_exists_by_username(name, session_maker):
-        try:
-            msg = await data['msg'].edit_text(
-                text=f'<b>Вы хотите сделать пользователя @{name} администратором?</b>',
-                reply_markup=await choose_add_admin_kb()
-            )
-        except (TelegramBadRequest, KeyError) as _ex:
-            logging.error(_ex)
-            await message.delete()
-            msg = await message.answer(text=f'<b>Вы хотите сделать пользователя @{name} администратором?</b>',
-                                       reply_markup=await choose_add_admin_kb())
+    if '@' in message.text:
+        if await is_user_exists_by_username(name, session_maker):
+            try:
+                msg = await data['msg'].edit_text(
+                    text=f'<b>Вы хотите сделать пользователя @{name} администратором?</b>',
+                    reply_markup=await choose_add_admin_kb()
+                )
+            except (TelegramBadRequest, KeyError) as _ex:
+                logging.error(_ex)
+                await message.delete()
+                msg = await message.answer(
+                    text=f'<b>Вы хотите сделать пользователя @{name} администратором?</b>',
+                    reply_markup=await choose_add_admin_kb()
+                )
+        else:
+            try:
+                msg = await data['msg'].edit_text(
+                    text=f'<b>Не удалось найти такого пользователя, попробуйте ещё раз</b>',
+                    reply_markup=await back_menu_kb()
+                )
+            except (TelegramBadRequest, KeyError) as _ex:
+                logging.error(_ex)
+                await message.delete()
+                msg = await message.answer(
+                    text=f'<b>Не удалось найти такого пользователя, попробуйте ещё раз</b>',
+                    reply_markup=await back_menu_kb()
+                )
     else:
-        try:
-            msg = await data['msg'].edit_text(
-                text=f'<b>Не удалось найти такого пользователя, попробуйте ещё раз</b>',
-                reply_markup=await back_menu_kb()
-            )
-        except (TelegramBadRequest, KeyError) as _ex:
-            logging.error(_ex)
-            await message.delete()
-            msg = await message.answer(text=f'<b>Не удалось найти такого пользователя, попробуйте ещё раз</b>',
-                                       reply_markup=await back_menu_kb())
+        if await is_user_exists(int(message.text), session_maker):
+            user_info = await get_user(int(message.text), session_maker)
+            try:
+                msg = await data['msg'].edit_text(
+                    text=f'<b>Вы хотите сделать пользователя ...\n\n'
+                         f'ФИО: <code>{user_info.user_fio}</code>\n'
+                         f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
+                         f'Имя: <code>{user_info.telegram_fullname}</code>\n\n'
+                         f'...администратором?</b>',
+                    reply_markup=await choose_add_admin_kb()
+                )
+
+            except (TelegramBadRequest, KeyError) as _ex:
+                logging.error(_ex)
+                await message.delete()
+                msg = await message.answer(
+                    text=f'<b>Вы хотите сделать пользователя ...\n\n'
+                         f'ФИО: <code>{user_info.user_fio}</code>\n'
+                         f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
+                         f'Имя: <code>{user_info.telegram_fullname}</code>\n\n'
+                         f'...администратором?</b>',
+                    reply_markup=await choose_add_admin_kb()
+                )
+        else:
+            try:
+                msg = await data['msg'].edit_text(
+                    text=f'<b>Не удалось найти такого пользователя, попробуйте ещё раз</b>',
+                    reply_markup=await back_menu_kb()
+                )
+            except (TelegramBadRequest, KeyError) as _ex:
+                logging.error(_ex)
+                await message.delete()
+                msg = await message.answer(
+                    text=f'<b>Не удалось найти такого пользователя, попробуйте ещё раз</b>',
+                    reply_markup=await back_menu_kb())
+
     await state.update_data(msg=msg)
 
 
@@ -83,10 +128,12 @@ async def accept_add_admin(call: types.CallbackQuery, state: FSMContext, session
             text=f'<b>Пользовтаель теперь администратор ⚙️</b>',
             reply_markup=await back_menu_kb()
         )
-    await bot.send_message(chat_id=user_info.telegram_id,
+    await bot.send_message(
+        chat_id=user_info.telegram_id,
                            text='Вы теперь администратор, ваша пригласительная ссылка\n\n'
                                 f'{Configuration.admin_topic_url}',
-                           disable_web_page_preview=True)
+                           disable_web_page_preview=True
+    )
     await state.update_data(msg=msg)
 
 

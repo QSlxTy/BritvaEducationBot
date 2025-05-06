@@ -56,42 +56,56 @@ async def send_lesson_list(chat_id: int, state: FSMContext):
     data = await state.get_data()
     try:
         await data['msg'].delete()
-    except TelegramBadRequest:
+    except Exception:
         pass
     try:
-        msg_wait = await bot.send_message(text='<b>Файл слишком большой, отправляю, ожидайте ⏳</b>',
-                                          chat_id=data['user_id'])
+        await data['msg_media'].delete()
+    except Exception:
+        pass
+    try:
+        msg_wait = await bot.send_message(
+            text='<b>Файл слишком большой, отправляю, ожидайте ⏳</b>',
+            chat_id=data['user_id']
+        )
         if 'mp4' in data['lessons'][data['current_lesson']].path:
-            msg = await bot.send_video(
+            msg_media = await bot.send_video(
                 chat_id=data['user_id'],
                 video=FSInputFile(data['lessons'][data['current_lesson']].path),
-                caption=f'<b>{data["lessons"][data["current_lesson"]].text}\n\n</b>'
-                        f'\n\n',
-                reply_markup=await check_lessons_list_kb(data['current_lesson'],
-                                                         len(data['lessons'])),
+                width=1080,
+                height=1920,
                 request_timeout=300)
+            msg = await bot.send_message(chat_id=data['user_id'],
+                                         text=f'<b>{data["lessons"][data["current_lesson"]].text}</b>',
+                                         reply_markup=await check_lessons_list_kb(data['current_lesson'],
+                                                                                  len(data['lessons'])))
 
         else:
-            msg = await bot.send_photo(
+            msg_media = await bot.send_photo(
                 chat_id=data['user_id'],
                 photo=FSInputFile(data['lessons'][data['current_lesson']].path),
-                caption=f'<b>{data["lessons"][data["current_lesson"]].text}\n\n</b>'
-                        f'\n\n',
-                reply_markup=await check_lessons_list_kb(data['current_lesson'],
-                                                         len(data['lessons'])),
                 request_timeout=300)
+            msg = await bot.send_message(
+                chat_id=data['user_id'],
+                text=f'<b>{data["lessons"][data["current_lesson"]].text}</b>',
+                reply_markup=await check_lessons_list_kb(data['current_lesson'],
+                                                         len(data['lessons']))
+            )
 
-        await state.update_data(msg=msg, text=data["lessons"][data["current_lesson"]].text,
+        await state.update_data(msg=msg, msg_media=msg_media, text=data["lessons"][data["current_lesson"]].text,
                                 path=data["lessons"][data["current_lesson"]].path)
         await msg_wait.delete()
     except IndexError as _ex:
         try:
-            msg = await data['msg'].edit_text(text=f'<b>Уроков пока нет</b>',
-                                              reply_markup=await back_menu_kb())
+            msg = await data['msg'].edit_text(
+                text=f'<b>Уроков пока нет</b>',
+                reply_markup=await back_menu_kb()
+            )
         except TelegramBadRequest:
-            msg = await bot.send_message(text=f'<b>Уроков пока нет</b>',
-                                         chat_id=data['user_id'],
-                                         reply_markup=await back_menu_kb())
+            msg = await bot.send_message(
+                text=f'<b>Уроков пока нет</b>',
+                chat_id=data['user_id'],
+                reply_markup=await back_menu_kb()
+            )
     await state.update_data(msg=msg)
 
 

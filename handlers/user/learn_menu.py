@@ -31,6 +31,7 @@ async def learn_info(call: types.CallbackQuery, state: FSMContext, session_maker
                                text=f'<b>🔔 Пользователь начал обучение</b>\n\n'
                                     f'ID в ТГ: <code>{user_info.telegram_id}</code>\n'
                                     f'Имя: <code>{user_info.telegram_fullname}</code>\n'
+                                    f'Юзернейм в ТГ: <code>{user_info.telegram_username}</code>\n'
                                     f'ID в БД: <code>{user_info.id}</code>\n'
                                     f'Направление <code>{text}</code>\n'
                                     f'⭐️ Начало обучения {datetime.now()}\n'

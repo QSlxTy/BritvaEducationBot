@@ -11,12 +11,13 @@ class PolicyStatus(AbstractModel):
     __tablename__ = 'policy_status'
 
     telegram_id: Mapped[int] = mapped_column(BigInteger(), unique=True)
-    date_start: Mapped[datetime] = mapped_column(default=datetime.now())
+    date_start: Mapped[datetime] = mapped_column()
     policy: Mapped[str] = mapped_column(TEXT)
     user_score: Mapped[int] = mapped_column(BigInteger(), default=0)
     last_lesson_id: Mapped[int] = mapped_column(BigInteger(), default=0)
     status: Mapped[str] = mapped_column(TEXT, default='Не начинал')
     count_try: Mapped[int] = mapped_column(BigInteger(), default=3)
+    bad_answer_id: Mapped[str] = mapped_column(TEXT(), default=0)
 
 
 async def get_learning_status(user_id: int, session_maker: sessionmaker) -> PolicyStatus:
@@ -34,7 +35,8 @@ async def learning_status(telegram_id: int, policy: str, session_maker: sessionm
                 telegram_id=telegram_id,
                 policy=policy,
                 user_score=0,
-                status='Начат'
+                status='Начат',
+                date_start=datetime.now()
             )
             try:
                 session.add(policy)
@@ -51,6 +53,12 @@ async def is_learning_status_exists(telegram_id: int, session_maker: sessionmake
 
 
 async def update_learning_status(telegram_id: int, data: dict, session_maker: sessionmaker) -> None:
+    async with session_maker() as session:
+        async with session.begin():
+            await session.execute(update(PolicyStatus).where(PolicyStatus.telegram_id == telegram_id).values(data))
+            await session.commit()
+
+async def update_status_db(telegram_id: int, data: dict, session_maker: sessionmaker) -> None:
     async with session_maker() as session:
         async with session.begin():
             await session.execute(update(PolicyStatus).where(PolicyStatus.telegram_id == telegram_id).values(data))
